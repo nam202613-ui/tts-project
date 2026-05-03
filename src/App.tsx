@@ -10,7 +10,7 @@ function cn(...inputs: ClassValue[]) {
 export default function App() {
   const [text, setText] = useState('');
   const [speed, setSpeed] = useState(1);
-  const [pitch, setPitch] = useState(1);
+  const [pitch, setPitch] = useState(1); // Đã thêm lại pitch
   const [volume, setVolume] = useState(1);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('an-female');
@@ -28,7 +28,6 @@ export default function App() {
     setText(prev => prev + `[pause=${seconds}s] `);
   };
 
-  // Hàm Phát giọng nói
   const speakWithPauses = (fullText: string) => {
     if (!fullText.trim()) return;
     window.speechSynthesis.cancel();
@@ -44,7 +43,10 @@ export default function App() {
         setTimeout(speakNext, pauseTime);
       } else if (current) {
         const utterance = new SpeechSynthesisUtterance(current);
-        utterance.rate = speed; utterance.pitch = pitch; utterance.volume = volume; utterance.lang = 'vi-VN';
+        utterance.rate = speed;
+        utterance.pitch = pitch; // Sử dụng pitch đã lưu
+        utterance.volume = volume;
+        utterance.lang = 'vi-VN';
         const voicesList = window.speechSynthesis.getVoices();
         const vnVoice = voicesList.find(v => v.lang.includes('vi'));
         if (vnVoice) utterance.voice = vnVoice;
@@ -58,25 +60,55 @@ export default function App() {
 
   const stopSpeaking = () => { window.speechSynthesis.cancel(); setIsSpeaking(false); };
 
-  // ==================== HÀM TẢI FILE MP3 MỚI ====================
+  // ==================== HÀM TẢI FILE MP3 CẢI TIẾN ====================
   const handleDownload = () => {
     if (!text.trim()) {
       alert("Vui lòng nhập văn bản trước khi tải về!");
       return;
     }
     
-    // Sử dụng API miễn phí của Google để lấy file audio
-    // Lưu ý: Giới hạn khoảng 200 ký tự mỗi lần tải cho bản miễn phí này
-    const cleanText = text.replace(/\[pause[:=]?\s*\d*\.?\d+s?\]/gi, ""); // Loại bỏ các thẻ pause khi tải
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=vi&client=tw-ob`;
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'EasyVoice-audio.mp3');
-    link.setAttribute('target', '_blank'); // Mở tab mới nếu trình duyệt chặn tải trực tiếp
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      // Loại bỏ các thẻ pause
+      const cleanText = text.replace(/\[pause[:=]?\s*\d*\.?\d+s?\]/gi, "").trim();
+      
+      if (cleanText.length > 150) {
+        alert("Vì giới hạn kỹ thuật, chỉ hỗ trợ tải tối đa 150 ký tự. Vui lòng chia nhỏ văn bản!");
+        return;
+      }
+      
+      // Tạo URL tải từ Google Translate TTS
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=vi&client=tw-ob`;
+      
+      // Tạo thẻ a để tải
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `EasyVoice-${Date.now()}.mp3`);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Hiển thị thông báo thành công
+      const notification = document.createElement('div');
+      notification.textContent = '✅ Đang tải file MP3...';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 12px;
+        z-index: 9999;
+        font-weight: bold;
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+      
+    } catch (error) {
+      alert("Có lỗi xảy ra khi tải file. Vui lòng thử lại!");
+      console.error("Download error:", error);
+    }
   };
   // ==============================================================
 
@@ -129,7 +161,7 @@ export default function App() {
                 <textarea
                   value={text}
                   onChange={e => setText(e.target.value)}
-                  placeholder="Bắt đầu nhập nội dung tại đây..."
+                  placeholder="Bắt đầu nhập nội dung tại đây... (Tối đa 150 ký tự khi tải MP3)"
                   className="w-full h-[450px] bg-transparent text-2xl lg:text-3xl text-zinc-100 placeholder:text-zinc-800 focus:outline-none resize-none leading-relaxed"
                 />
 
@@ -177,7 +209,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-zinc-950/90 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-xl">
+              {/* PHẦN ĐÃ CẢI TIẾN: 3 THANH TRƯỢT ĐẦY ĐỦ */}
+              <div className="bg-zinc-950/90 border border-white/10 rounded-[2rem] p-8 space-y-6 shadow-xl">
+                {/* Tốc độ */}
                 <div>
                   <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
                     <span>TỐC ĐỘ</span>
@@ -185,11 +219,31 @@ export default function App() {
                   </div>
                   <input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
                 </div>
+
+                {/* Cao độ - ĐÃ THÊM LẠI */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
+                    <span>CAO ĐỘ</span>
+                    <span className="text-indigo-400">{pitch}</span>
+                  </div>
+                  <input type="range" min="0.5" max="2" step="0.05" value={pitch} onChange={e => setPitch(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
+                </div>
+
+                {/* Âm lượng */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
+                    <span>ÂM LƯỢNG</span>
+                    <span className="text-indigo-400">{Math.round(volume * 100)}%</span>
+                  </div>
+                  <input type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
+                </div>
+
+                {/* Nút tải MP3 */}
                 <button
                   onClick={handleDownload}
-                  className="w-full py-4 border border-white/10 hover:bg-white/5 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold transition-all"
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold transition-all mt-4"
                 >
-                  <Download size={20} /> TẢI MP3
+                  <Download size={20} /> TẢI FILE MP3
                 </button>
               </div>
 
