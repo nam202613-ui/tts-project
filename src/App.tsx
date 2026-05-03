@@ -28,6 +28,7 @@ export default function App() {
     setText(prev => prev + `[pause=${seconds}s] `);
   };
 
+  // Hàm Phát giọng nói
   const speakWithPauses = (fullText: string) => {
     if (!fullText.trim()) return;
     window.speechSynthesis.cancel();
@@ -57,9 +58,30 @@ export default function App() {
 
   const stopSpeaking = () => { window.speechSynthesis.cancel(); setIsSpeaking(false); };
 
+  // ==================== HÀM TẢI FILE MP3 MỚI ====================
+  const handleDownload = () => {
+    if (!text.trim()) {
+      alert("Vui lòng nhập văn bản trước khi tải về!");
+      return;
+    }
+    
+    // Sử dụng API miễn phí của Google để lấy file audio
+    // Lưu ý: Giới hạn khoảng 200 ký tự mỗi lần tải cho bản miễn phí này
+    const cleanText = text.replace(/\[pause[:=]?\s*\d*\.?\d+s?\]/gi, ""); // Loại bỏ các thẻ pause khi tải
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=vi&client=tw-ob`;
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'EasyVoice-audio.mp3');
+    link.setAttribute('target', '_blank'); // Mở tab mới nếu trình duyệt chặn tải trực tiếp
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  // ==============================================================
+
   return (
     <div className="flex h-screen w-full relative overflow-hidden bg-black text-white">
-      {/* 1. HÌNH NỀN */}
       <div 
         className="absolute inset-0 z-0 bg-fixed"
         style={{
@@ -68,11 +90,8 @@ export default function App() {
           backgroundPosition: 'center',
         }}
       />
-      
-      {/* 2. LỚP PHỦ ĐEN ĐẬM */}
       <div className="absolute inset-0 z-0 bg-black/80"></div>
 
-      {/* 3. SIDEBAR */}
       <aside className={cn(
         "relative z-20 h-full bg-zinc-950 border-r border-white/5 w-72 flex flex-col transition-all duration-300",
         !sidebarOpen && "-ml-72"
@@ -93,7 +112,6 @@ export default function App() {
         </div>
       </aside>
 
-      {/* 4. NỘI DUNG CHÍNH */}
       <div className="flex-1 flex flex-col relative z-10">
         <header className="h-16 border-b border-white/5 bg-black/40 backdrop-blur-sm flex items-center px-8 justify-between">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-zinc-800 rounded-lg">
@@ -106,7 +124,6 @@ export default function App() {
         <main className="flex-1 p-6 lg:p-10 overflow-auto custom-scrollbar">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            {/* CỘT TRÁI: Ô NHẬP LIỆU (Cỡ chữ to) */}
             <div className="lg:col-span-8">
               <div className="bg-zinc-950/90 border border-white/10 rounded-[2.5rem] p-10 shadow-2xl">
                 <textarea
@@ -138,9 +155,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* CỘT PHẢI: CÀI ĐẶT */}
             <div className="lg:col-span-4 space-y-8">
-              {/* CHỌN GIỌNG */}
               <div className="bg-zinc-950/90 border border-white/10 rounded-[2rem] p-8 shadow-xl">
                 <p className="text-xs font-black uppercase text-zinc-500 mb-6 tracking-widest">Giọng đọc</p>
                 <div className="grid grid-cols-2 gap-4">
@@ -162,7 +177,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* THANH TRƯỢT (Slider to hơn) */}
               <div className="bg-zinc-950/90 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-xl">
                 <div>
                   <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
@@ -171,16 +185,14 @@ export default function App() {
                   </div>
                   <input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
                 </div>
-                <div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
-                    <span>ÂM LƯỢNG</span>
-                    <span className="text-indigo-400">{Math.round(volume * 100)}%</span>
-                  </div>
-                  <input type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
-                </div>
+                <button
+                  onClick={handleDownload}
+                  className="w-full py-4 border border-white/10 hover:bg-white/5 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold transition-all"
+                >
+                  <Download size={20} /> TẢI MP3
+                </button>
               </div>
 
-              {/* NÚT PHÁT CHÍNH (Siêu to) */}
               <button
                 onClick={isSpeaking ? stopSpeaking : () => speakWithPauses(text)}
                 className={cn(
@@ -193,7 +205,7 @@ export default function App() {
                 {isSpeaking ? (
                   <><Square size={36} fill="currentColor" /> DỪNG</>
                 ) : (
-                  <><Play size={36} fill="currentColor" className="ml-1" /> PHÁT NGAY</>
+                  <><Play size={36} fill="currentColor" className="ml-1" /> PHÁT</>
                 )}
               </button>
             </div>
