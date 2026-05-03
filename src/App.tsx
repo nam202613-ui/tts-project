@@ -10,7 +10,7 @@ function cn(...inputs: ClassValue[]) {
 export default function App() {
   const [text, setText] = useState('');
   const [speed, setSpeed] = useState(1);
-  const [pitch, setPitch] = useState(1); // Đã thêm lại pitch
+  const [pitch, setPitch] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('an-female');
@@ -43,9 +43,9 @@ export default function App() {
         setTimeout(speakNext, pauseTime);
       } else if (current) {
         const utterance = new SpeechSynthesisUtterance(current);
-        utterance.rate = speed;
-        utterance.pitch = pitch; // Sử dụng pitch đã lưu
-        utterance.volume = volume;
+        utterance.rate = speed; 
+        utterance.pitch = pitch; 
+        utterance.volume = volume; 
         utterance.lang = 'vi-VN';
         const voicesList = window.speechSynthesis.getVoices();
         const vnVoice = voicesList.find(v => v.lang.includes('vi'));
@@ -60,57 +60,29 @@ export default function App() {
 
   const stopSpeaking = () => { window.speechSynthesis.cancel(); setIsSpeaking(false); };
 
-  // ==================== HÀM TẢI FILE MP3 CẢI TIẾN ====================
+  // ==================== HÀM TẢI FILE MP3 ĐÃ FIX LỖI 404 ====================
   const handleDownload = () => {
     if (!text.trim()) {
-      alert("Vui lòng nhập văn bản trước khi tải về!");
+      alert("Vui lòng nhập văn bản!");
       return;
     }
     
-    try {
-      // Loại bỏ các thẻ pause
-      const cleanText = text.replace(/\[pause[:=]?\s*\d*\.?\d+s?\]/gi, "").trim();
-      
-      if (cleanText.length > 150) {
-        alert("Vì giới hạn kỹ thuật, chỉ hỗ trợ tải tối đa 150 ký tự. Vui lòng chia nhỏ văn bản!");
-        return;
-      }
-      
-      // Tạo URL tải từ Google Translate TTS
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=vi&client=tw-ob`;
-      
-      // Tạo thẻ a để tải
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `EasyVoice-${Date.now()}.mp3`);
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Hiển thị thông báo thành công
-      const notification = document.createElement('div');
-      notification.textContent = '✅ Đang tải file MP3...';
-      notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #10b981;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 12px;
-        z-index: 9999;
-        font-weight: bold;
-      `;
-      document.body.appendChild(notification);
-      setTimeout(() => notification.remove(), 3000);
-      
-    } catch (error) {
-      alert("Có lỗi xảy ra khi tải file. Vui lòng thử lại!");
-      console.error("Download error:", error);
+    // Loại bỏ các thẻ [pause] vì Google TTS không hiểu nó trong URL
+    const cleanText = text.replace(/\[pause[:=]?\s*\d*\.?\d+s?\]/gi, "").trim();
+    
+    // Giới hạn 200 ký tự (Google TTS Free giới hạn rất chặt đoạn này)
+    if (cleanText.length > 200) {
+      alert("Đoạn văn quá dài để tải (Tối đa 200 ký tự). Hãy chia nhỏ ra nhé!");
+      return;
     }
+
+    // Link Google TTS chuẩn để tránh 404
+    const url = `https://translate.google.com.vn/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=vi&client=tw-ob`;
+    
+    // Mở trong tab mới là cách an toàn nhất để tránh bị chặn tải về
+    window.open(url, '_blank');
   };
-  // ==============================================================
+  // =========================================================================
 
   return (
     <div className="flex h-screen w-full relative overflow-hidden bg-black text-white">
@@ -161,7 +133,7 @@ export default function App() {
                 <textarea
                   value={text}
                   onChange={e => setText(e.target.value)}
-                  placeholder="Bắt đầu nhập nội dung tại đây... (Tối đa 150 ký tự khi tải MP3)"
+                  placeholder="Bắt đầu nhập nội dung tại đây..."
                   className="w-full h-[450px] bg-transparent text-2xl lg:text-3xl text-zinc-100 placeholder:text-zinc-800 focus:outline-none resize-none leading-relaxed"
                 />
 
@@ -170,19 +142,11 @@ export default function App() {
                     <span className="text-xs font-black uppercase text-zinc-500 tracking-wider">Khoảng nghỉ</span>
                     <div className="flex gap-3 mt-3">
                       {[0.5, 1, 1.5, 2].map(s => (
-                        <button
-                          key={s}
-                          onClick={() => insertPause(s)}
-                          className="px-6 py-3 bg-zinc-900 hover:bg-indigo-600 border border-white/10 rounded-xl text-sm font-bold transition-all"
-                        >
-                          {s}s
-                        </button>
+                        <button key={s} onClick={() => insertPause(s)} className="px-6 py-3 bg-zinc-900 hover:bg-indigo-600 border border-white/10 rounded-xl text-sm font-bold transition-all">{s}s</button>
                       ))}
                     </div>
                   </div>
-                  <button onClick={() => setText('')} className="p-4 text-zinc-600 hover:text-red-400 transition-all">
-                    <Trash2 size={32} />
-                  </button>
+                  <button onClick={() => setText('')} className="p-4 text-zinc-600 hover:text-red-400 transition-all"><Trash2 size={32} /></button>
                 </div>
               </div>
             </div>
@@ -195,12 +159,7 @@ export default function App() {
                     <button
                       key={v.id}
                       onClick={() => setSelectedVoice(v.id)}
-                      className={cn(
-                        "p-4 rounded-2xl border transition-all flex flex-col items-center gap-2",
-                        selectedVoice === v.id 
-                          ? "border-indigo-500 bg-indigo-600/30 text-white shadow-lg" 
-                          : "border-white/5 bg-zinc-900 text-zinc-500 hover:bg-zinc-800"
-                      )}
+                      className={cn("p-4 rounded-2xl border transition-all flex flex-col items-center gap-2", selectedVoice === v.id ? "border-indigo-500 bg-indigo-600/30 text-white shadow-lg" : "border-white/5 bg-zinc-900 text-zinc-500 hover:bg-zinc-800")}
                     >
                       <span className="text-4xl">{v.emoji}</span>
                       <span className="text-xs font-bold">{v.name}</span>
@@ -209,58 +168,25 @@ export default function App() {
                 </div>
               </div>
 
-              {/* PHẦN ĐÃ CẢI TIẾN: 3 THANH TRƯỢT ĐẦY ĐỦ */}
-              <div className="bg-zinc-950/90 border border-white/10 rounded-[2rem] p-8 space-y-6 shadow-xl">
-                {/* Tốc độ */}
+              <div className="bg-zinc-950/90 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-xl">
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
-                    <span>TỐC ĐỘ</span>
-                    <span className="text-indigo-400">{speed}x</span>
-                  </div>
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4"><span>TỐC ĐỘ</span><span className="text-indigo-400">{speed}x</span></div>
                   <input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={e => setSpeed(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
                 </div>
-
-                {/* Cao độ - ĐÃ THÊM LẠI */}
+                {/* THANH CAO ĐỘ (PITCH) ĐÃ QUAY TRỞ LẠI */}
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
-                    <span>CAO ĐỘ</span>
-                    <span className="text-indigo-400">{pitch}</span>
-                  </div>
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4"><span>CAO ĐỘ</span><span className="text-indigo-400">{pitch}</span></div>
                   <input type="range" min="0.5" max="2" step="0.05" value={pitch} onChange={e => setPitch(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
                 </div>
-
-                {/* Âm lượng */}
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4">
-                    <span>ÂM LƯỢNG</span>
-                    <span className="text-indigo-400">{Math.round(volume * 100)}%</span>
-                  </div>
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 mb-4"><span>ÂM LƯỢNG</span><span className="text-indigo-400">{Math.round(volume * 100)}%</span></div>
                   <input type="range" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(parseFloat(e.target.value))} className="w-full h-2 accent-indigo-500" />
                 </div>
-
-                {/* Nút tải MP3 */}
-                <button
-                  onClick={handleDownload}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold transition-all mt-4"
-                >
-                  <Download size={20} /> TẢI FILE MP3
-                </button>
+                <button onClick={handleDownload} className="w-full py-4 bg-zinc-900 border border-white/10 hover:bg-indigo-600 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold transition-all"><Download size={20} /> TẢI FILE MP3</button>
               </div>
 
-              <button
-                onClick={isSpeaking ? stopSpeaking : () => speakWithPauses(text)}
-                className={cn(
-                  "w-full py-8 rounded-[2.5rem] text-3xl font-black flex items-center justify-center gap-4 transition-all active:scale-95 shadow-[0_0_30px_rgba(79,70,229,0.3)]",
-                  isSpeaking 
-                    ? "bg-red-600" 
-                    : "bg-indigo-600 hover:bg-indigo-500"
-                )}
-              >
-                {isSpeaking ? (
-                  <><Square size={36} fill="currentColor" /> DỪNG</>
-                ) : (
-                  <><Play size={36} fill="currentColor" className="ml-1" /> PHÁT</>
-                )}
+              <button onClick={isSpeaking ? stopSpeaking : () => speakWithPauses(text)} className={cn("w-full py-8 rounded-[2.5rem] text-3xl font-black flex items-center justify-center gap-4 transition-all active:scale-95 shadow-[0_0_30px_rgba(79,70,229,0.3)]", isSpeaking ? "bg-red-600" : "bg-indigo-600 hover:bg-indigo-500")}>
+                {isSpeaking ? (<><Square size={36} fill="currentColor" /> DỪNG</>) : (<><Play size={36} fill="currentColor" className="ml-1" /> PHÁT NGAY</>)}
               </button>
             </div>
           </div>
@@ -271,7 +197,7 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         input[type='range'] { -webkit-appearance: none; background: #18181b; height: 6px; border-radius: 3px; }
-        input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #6366f1; border-radius: 50%; cursor: pointer; border: 3px solid #fff; }
+        input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #6366f1; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
       `}</style>
     </div>
   );
